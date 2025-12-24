@@ -10,7 +10,6 @@ import { recipeDetailStyles } from "../../assets/styles/recipe-detail.styles";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../../constants/colors";
 import { Ionicons } from "@expo/vector-icons";
-import YoutubePlayer from "react-native-youtube-iframe";
 
 const RecipeDetailScreen = () => {
   const { id: recipeId } = useLocalSearchParams();
@@ -20,7 +19,6 @@ const RecipeDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [playing, setPlaying] = useState(false);
 
   const { user } = useUser();
   const userId = user?.id;
@@ -62,50 +60,19 @@ const RecipeDetailScreen = () => {
     loadRecipeDetail();
   }, [recipeId, userId]);
 
-  // Extract YouTube video ID from any URL format
-  const getYouTubeVideoId = (url) => {
-    if (!url) return null;
-    
-    let videoId = "";
-    
-    // Handle short URL: https://youtu.be/VIDEO_ID
-    if (url.includes("youtu.be/")) {
-      videoId = url.split("youtu.be/")[1];
-    }
-    // Handle long URL: https://www.youtube.com/watch?v=VIDEO_ID
-    else if (url.includes("v=")) {
-      videoId = url.split("v=")[1];
-    }
-    
-    // Remove any query parameters
-    if (videoId) {
-      videoId = videoId.split("?")[0];
-      videoId = videoId.split("&")[0];
-    }
-    
-    return videoId;
-  };
-
   // Open YouTube in app or browser as fallback
-  const openYouTube = useCallback(async () => {
-    if (recipe?.youtubeUrl) {
-      try {
-        // Try to open in YouTube app
-        const youtubeAppUrl = recipe.youtubeUrl.replace("https://", "youtube://");
-        const canOpen = await Linking.canOpenURL(youtubeAppUrl);
-        
-        if (canOpen) {
-          await Linking.openURL(youtubeAppUrl);
-        } else {
-          // Fallback to browser
-          await Linking.openURL(recipe.youtubeUrl);
-        }
-      } catch (error) {
-        console.error("Error opening YouTube:", error);
-        await Linking.openURL(recipe.youtubeUrl);
-      }
+ const openYouTube = useCallback(async () => {
+  if (recipe?.youtubeUrl) {
+    try {
+      // Just open the original YouTube URL directly
+      await Linking.openURL(recipe.youtubeUrl);
+    } catch (error) {
+      console.error("Error opening YouTube:", error);
+      // If there's an error, try opening in browser
+      await Linking.openURL(recipe.youtubeUrl);
     }
-  }, [recipe?.youtubeUrl]);
+  }
+}, [recipe?.youtubeUrl]);
 
   const handleToggleSave = async () => {
     setIsSaving(true);
@@ -147,15 +114,7 @@ const RecipeDetailScreen = () => {
     }
   };
 
-  const onStateChange = useCallback((state) => {
-    if (state === "ended") {
-      setPlaying(false);
-    }
-  }, []);
-
   if (loading) return <LoadingSpinner message="Loading recipe details..." />;
-
-  const youtubeVideoId = getYouTubeVideoId(recipe.youtubeUrl);
 
   return (
     <View style={recipeDetailStyles.container}>
@@ -240,7 +199,7 @@ const RecipeDetailScreen = () => {
             </View>
           </View>
 
-          {recipe.youtubeUrl && youtubeVideoId && (
+          {recipe.youtubeUrl && (
             <View style={recipeDetailStyles.sectionContainer}>
               <View style={recipeDetailStyles.sectionTitleRow}>
                 <LinearGradient
@@ -252,53 +211,35 @@ const RecipeDetailScreen = () => {
                 <Text style={recipeDetailStyles.sectionTitle}>Video Tutorial</Text>
               </View>
 
-              <View style={recipeDetailStyles.videoCard}>
-                <YoutubePlayer
-                  height={200}
-                  width="100%"
-                  play={playing}
-                  videoId={youtubeVideoId}
-                  onChangeState={onStateChange}
-                  onError={(error) => {
-                    console.error("YouTube player error:", error);
-                    Alert.alert(
-                      "Video Error",
-                      "Could not load YouTube video. Try opening in the YouTube app instead.",
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        { text: "Open YouTube", onPress: openYouTube }
-                      ]
-                    );
-                  }}
-                  webViewStyle={{ borderRadius: 10 }}
-                  webViewProps={{
-                    androidLayerType: "hardware",
-                  }}
-                />
-              </View>
-              
-              {/* Fallback button */}
               <TouchableOpacity 
+                style={recipeDetailStyles.videoCard}
                 onPress={openYouTube}
-                style={{
-                  marginTop: 10,
-                  backgroundColor: '#FF0000',
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  flexDirection: 'row',
+              >
+                <View style={{ 
+                  height: 200, 
+                  width: '100%', 
+                  backgroundColor: '#000',
+                  borderRadius: 10,
                   justifyContent: 'center',
                   alignItems: 'center'
-                }}
-              >
-                <Ionicons name="logo-youtube" size={20} color="white" />
-                <Text style={{
-                  color: 'white',
-                  marginLeft: 8,
-                  fontWeight: 'bold',
-                  fontSize: 16
                 }}>
-                  Open in YouTube App
-                </Text>
+                  <Ionicons name="logo-youtube" size={60} color="#FF0000" />
+                  <Text style={{ 
+                    color: 'white', 
+                    marginTop: 10, 
+                    fontSize: 18, 
+                    fontWeight: 'bold' 
+                  }}>
+                    Watch on YouTube
+                  </Text>
+                  <Text style={{ 
+                    color: '#ccc', 
+                    marginTop: 5, 
+                    fontSize: 14 
+                  }}>
+                    Tap to open video
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}
